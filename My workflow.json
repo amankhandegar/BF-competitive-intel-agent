@@ -1,0 +1,738 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * MON"
+            }
+          ]
+        }
+      },
+      "id": "c823fce3-18f7-43ce-b378-261e0133678b",
+      "name": "Weekly Trigger (Mon 8am)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -736,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://news.google.com/rss/search?q=Tanium+endpoint+compliance&hl=en-US&gl=US&ceid=US:en",
+        "options": {}
+      },
+      "id": "aaf7aac9-1f7a-466a-a71d-1f110ed578c3",
+      "name": "Fetch Tanium Blog RSS",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1,
+      "position": [
+        -384,
+        -112
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://news.google.com/rss/search?q=Tanium+product+update+release&hl=en-US&gl=US&ceid=US:en",
+        "options": {}
+      },
+      "id": "8e59ee3b-5aa6-46d5-9c47-92c3a14bad3e",
+      "name": "Fetch Tanium Docs RSS",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1,
+      "position": [
+        -208,
+        -64
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://newsapi.org/v2/everything",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "q",
+              "value": "Tanium OR Ivanti OR ManageEngine endpoint compliance security"
+            },
+            {
+              "name": "sortBy",
+              "value": "publishedAt"
+            },
+            {
+              "name": "language",
+              "value": "en"
+            },
+            {
+              "name": "pageSize",
+              "value": "10"
+            },
+            {
+              "name": "apiKey",
+              "value": "=1093860e5cb14b639db9c4631ec79a77"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "88f6543a-6d95-4927-9594-85e2113a51de",
+      "name": "Fetch News (NewsAPI)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -240,
+        144
+      ]
+    },
+    {
+      "parameters": {
+        "numberInputs": 7
+      },
+      "id": "190efff8-1faa-4afa-8b38-a69520a32599",
+      "name": "Merge All Sources",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        176,
+        48
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normalise all items into a unified shape\nconst items = $input.all();\nconst normalised = [];\n\nfor (const item of items) {\n  const d = item.json;\n\n  // RSS feed items (Tanium blog / docs)\n  if (d.title && d.link) {\n    const pubDate = d.pubDate || d.isoDate || d.date || '';\n    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);\n    const pub = new Date(pubDate);\n    if (pub > sevenDaysAgo || !pubDate) {\n      // Auto-detect competitor from title/summary content\nconst text = (d.title + ' ' + (d.contentSnippet || '')).toLowerCase();\nconst competitor = text.includes('ivanti') ? 'Ivanti' \n                 : text.includes('manageengine') ? 'ManageEngine' \n                 : 'Tanium';\n\nnormalised.push({\n  source: competitor + ' RSS',\n  title: d.title || '',\n  url: d.link || '',\n  summary: (d.contentSnippet || d.content || d.description || '').substring(0, 500),\n  published: pubDate,\n  competitor: competitor,\n  category: 'Blog / Docs'\n});\n    }\n    continue;\n  }\n\n  // NewsAPI response\n  if (d.articles) {\n    for (const art of d.articles) {\n      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);\n      const pub = new Date(art.publishedAt);\n      if (pub > sevenDaysAgo) {\n        const text = (art.title + ' ' + (art.description || '')).toLowerCase();\nconst competitor = text.includes('ivanti') ? 'Ivanti'\n                 : text.includes('manageengine') ? 'ManageEngine'\n                 : 'Tanium';\n\nnormalised.push({\n  source: art.source?.name || 'News',\n  title: art.title || '',\n  url: art.url || '',\n  summary: (art.description || art.content || '').substring(0, 500),\n  published: art.publishedAt,\n  competitor: competitor,\n  category: 'News'\n});\n      }\n    }\n  }\n}\n\nif (normalised.length === 0) {\n  return [{ json: { no_new_items: true, message: 'No new Tanium content this week.' } }];\n}\n\n// Deduplicate by URL\nconst seen = new Set();\nconst deduped = normalised.filter(n => {\n  if (seen.has(n.url)) return false;\n  seen.add(n.url);\n  return true;\n});\n\nreturn deduped.map(n => ({ json: n }));\n"
+      },
+      "id": "5bb72605-77b3-4bfb-b138-996bb542246f",
+      "name": "Normalise & Filter (Last 7 Days)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        464,
+        144
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "cond-no-items",
+              "leftValue": "={{ $json.no_new_items }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "fb992880-bc5d-4f77-8a8a-3fcba7da42c6",
+      "name": "Any New Items?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        672,
+        144
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Aggregate all items and build a prompt for Claude\nconst items = $input.all();\n\nconst itemList = items.map((item, i) => {\n  const d = item.json;\n  return '[' + (i+1) + '] COMPETITOR: ' + d.competitor + '\\nSOURCE: ' + d.source + '\\nTITLE: ' + d.title + '\\nURL: ' + d.url + '\\nPUBLISHED: ' + d.published + '\\nSUMMARY: ' + d.summary + '\\n';\n}).join('\\n---\\n');\n\nconst prompt = 'You are a Senior Product Intelligence Analyst for HCL BigFix Compliance.\\n\\n'\n  + 'Below are ' + items.length + ' recent items from Tanium, Ivanti, and ManageEngine (direct BigFix competitors) published in the last 7 days.\\n\\n'\n  + 'Analyse them and produce a structured competitive intelligence brief with EXACTLY this format:\\n\\n'\n  + '## EXECUTIVE SUMMARY\\n'\n  + 'One paragraph (3-5 sentences) covering the most strategically important signals this week across ALL three competitors.\\n\\n'\n  + '## KEY SIGNALS (top 5, ranked by importance to BigFix Compliance PM)\\n'\n  + 'For each signal:\\n'\n  + '- Red/Yellow/Green THREAT LEVEL (Red=high threat, Yellow=watch, Green=opportunity)\\n'\n  + '- COMPETITOR: Which competitor this is about\\n'\n  + '- SIGNAL: What they did / announced / changed\\n'\n  + '- BIGFIX IMPLICATION: What this means for BigFix Compliance strategy\\n'\n  + '- RECOMMENDED ACTION: Concrete PM action (PRD update / roadmap item / talking point)\\n\\n'\n  + '## COMPETITOR COMPARISON\\n'\n  + 'A brief side-by-side of what each competitor focused on this week:\\n'\n  + '- Tanium:\\n'\n  + '- Ivanti:\\n'\n  + '- ManageEngine:\\n\\n'\n  + '## FEATURE GAPS IDENTIFIED\\n'\n  + 'List any features Tanium/Ivanti/ManageEngine are emphasising that BigFix Compliance currently lacks.\\n\\n'\n  + '## BIGFIX DIFFERENTIATION OPPORTUNITIES\\n'\n  + 'Where can BigFix Compliance double down to stand out against all three?\\n\\n'\n  + '## ITEMS ANALYSED\\n'\n  + 'List all ' + items.length + ' items as: [N] Competitor - Title - URL\\n\\n'\n  + '---\\nRAW DATA:\\n'\n  + itemList\n  + '\\n\\nRespond only with the structured brief above. Be direct and specific - this is for a PM Monday morning review.';\n\nreturn [{ json: { prompt, item_count: items.length } }];"
+      },
+      "id": "52110076-f71c-4dfc-954c-20f30245ea10",
+      "name": "Build Claude Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        64
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract Gemini's text response and prepare for Google Sheets\nconst geminiResponse = $input.first().json;\nconst itemCountNode = $('Build Claude Prompt').first().json;\n\nlet analysisText = '';\ntry {\n  // Gemini response format is different from Claude\n  analysisText = geminiResponse.candidates[0].content.parts[0].text;\n} catch(e) {\n  analysisText = 'Error extracting Gemini response: ' + JSON.stringify(geminiResponse);\n}\n\n// Fix line breaks — convert \\n to actual newlines\nanalysisText = analysisText.replace(/\\\\n/g, '\\n');\n\n// Parse threat level counts from text\nconst redCount = (analysisText.match(/🔴/g) || []).length;\nconst yellowCount = (analysisText.match(/🟡/g) || []).length;\nconst greenCount = (analysisText.match(/🟢/g) || []).length;\n\n// Extract executive summary\nconst execMatch = analysisText.match(/## EXECUTIVE SUMMARY\\n([\\s\\S]*?)(?=\\n##)/);\nconst execSummary = execMatch ? execMatch[1].trim() : analysisText.substring(0, 500);\n\n// Week label\nconst weekStart = new Date();\nweekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1);\nconst weekLabel = weekStart.toISOString().split('T')[0];\n\nreturn [{\n  json: {\n    week: weekLabel,\n    competitor: 'Tanium',\n    items_analysed: itemCountNode.item_count || 0,\n    red_threats: redCount,\n    yellow_watch: yellowCount,\n    green_opps: greenCount,\n    exec_summary: execSummary,\n    full_analysis: analysisText,\n    generated_at: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "37363c4d-12be-4111-972a-8c120b5c09a9",
+      "name": "Extract & Structure Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1696,
+        64
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1yWoB8k6cfaF4e_kkQFbCGspexJUzitUDAhbaDk_LDvg",
+          "mode": "id"
+        },
+        "sheetName": {
+          "value": "CI_Log",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Week": "={{ $json.week }}",
+            "Competitor": "={{ $json.competitor }}",
+            "Items_Analysed": "={{ $json.items_analysed }}",
+            "Red_Threats": "={{ $json.red_threats }}",
+            "Yellow_Watch": "={{ $json.yellow_watch }}",
+            "Green_Opps": "={{ $json.green_opps }}",
+            "Exec_Summary": "={{ $json.exec_summary }}",
+            "Full_Analysis": "={{ $json.full_analysis }}",
+            "Generated_At": "={{ $json.generated_at }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Week",
+              "displayName": "Week",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Competitor",
+              "displayName": "Competitor",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Items_Analysed",
+              "displayName": "Items_Analysed",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Red_Threats",
+              "displayName": "Red_Threats",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Yellow_Watch",
+              "displayName": "Yellow_Watch",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Green_Opps",
+              "displayName": "Green_Opps",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Exec_Summary",
+              "displayName": "Exec_Summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Full_Analysis",
+              "displayName": "Full_Analysis",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Generated_At",
+              "displayName": "Generated_At",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "c141b402-fa17-4edd-8739-160b0f0fe601",
+      "name": "Log to Google Sheets (CI_Log)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        1920,
+        0
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "OCL4Ya4HEXnoleZs",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1yWoB8k6cfaF4e_kkQFbCGspexJUzitUDAhbaDk_LDvg",
+          "mode": "id"
+        },
+        "sheetName": {
+          "value": "Dashboard",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Last_Updated": "={{ $json.generated_at }}",
+            "Week": "={{ $json.week }}",
+            "Tanium_Red": "={{ $json.red_threats }}",
+            "Tanium_Yellow": "={{ $json.yellow_watch }}",
+            "Tanium_Green": "={{ $json.green_opps }}",
+            "Latest_Summary": "={{ $json.exec_summary }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Last_Updated",
+              "displayName": "Last_Updated",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Week",
+              "displayName": "Week",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Tanium_Red",
+              "displayName": "Tanium_Red",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Tanium_Yellow",
+              "displayName": "Tanium_Yellow",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Tanium_Green",
+              "displayName": "Tanium_Green",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Latest_Summary",
+              "displayName": "Latest_Summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "29bf909b-5a52-482c-bb83-c0f54b457300",
+      "name": "Update Dashboard Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        1920,
+        160
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "OCL4Ya4HEXnoleZs",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'completed', week: $('Extract & Structure Response').first().json.week, items: $('Extract & Structure Response').first().json.items_analysed }) }}",
+        "options": {}
+      },
+      "id": "6f96c0e8-c197-46c7-98dd-8d33e69f6cdf",
+      "name": "Workflow Complete",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        2128,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=={{ $json.prompt }}",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        1088,
+        64
+      ],
+      "id": "984101b1-1cfd-4c9f-b9ee-45ce499ebfad",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        1024,
+        272
+      ],
+      "id": "7fd32d45-e8f9-43f1-a1ad-241b92a82f84",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "gnE0teAoxOJDsMxQ",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://www.ivanti.com/blog/rss",
+        "options": {
+          "customFields": ""
+        }
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        -624,
+        304
+      ],
+      "id": "309ab859-7d29-4703-bf6f-0ca4a0a91f4f",
+      "name": "Fetch Ivanti Blog RSS"
+    },
+    {
+      "parameters": {
+        "url": "https://www.ivanti.com/blog/topics/security-advisory/rss",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        -464,
+        368
+      ],
+      "id": "3f9e96a4-012f-4f7e-9b14-30f2aad54588",
+      "name": "Fetch Ivanti Docs RSS"
+    },
+    {
+      "parameters": {
+        "url": "https://news.google.com/rss/search?q=ManageEngine+endpoint+compliance&hl=en-US&gl=US&ceid=US:en",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        -240,
+        416
+      ],
+      "id": "200b49de-ef6d-41c5-b3c1-42c9e7e4b7fb",
+      "name": "Fetch Manageengine Blog RSS"
+    },
+    {
+      "parameters": {
+        "url": "https://news.google.com/rss/search?q=ManageEngine+Endpoint+Central+compliance+update&hl=en-US&gl=US&ceid=US:en",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        -96,
+        464
+      ],
+      "id": "d57c2add-732d-44d1-a229-3c720e32625f",
+      "name": "Fetch Manageengine Docs RSS"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Weekly Trigger (Mon 8am)": {
+      "main": [
+        [
+          {
+            "node": "Fetch Tanium Blog RSS",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch Tanium Docs RSS",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch News (NewsAPI)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch Ivanti Blog RSS",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch Ivanti Docs RSS",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch Manageengine Blog RSS",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch Manageengine Docs RSS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Tanium Blog RSS": {
+      "main": [
+        [
+          {
+            "node": "Merge All Sources",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Tanium Docs RSS": {
+      "main": [
+        [
+          {
+            "node": "Merge All Sources",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge All Sources": {
+      "main": [
+        [
+          {
+            "node": "Normalise & Filter (Last 7 Days)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalise & Filter (Last 7 Days)": {
+      "main": [
+        [
+          {
+            "node": "Any New Items?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Any New Items?": {
+      "main": [
+        [
+          {
+            "node": "Build Claude Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Claude Prompt": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract & Structure Response": {
+      "main": [
+        [
+          {
+            "node": "Log to Google Sheets (CI_Log)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Update Dashboard Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log to Google Sheets (CI_Log)": {
+      "main": [
+        [
+          {
+            "node": "Workflow Complete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch News (NewsAPI)": {
+      "main": [
+        [
+          {
+            "node": "Merge All Sources",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Extract & Structure Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Ivanti Blog RSS": {
+      "main": [
+        [
+          {
+            "node": "Merge All Sources",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "Fetch Ivanti Docs RSS": {
+      "main": [
+        [
+          {
+            "node": "Merge All Sources",
+            "type": "main",
+            "index": 4
+          }
+        ]
+      ]
+    },
+    "Fetch Manageengine Blog RSS": {
+      "main": [
+        [
+          {
+            "node": "Merge All Sources",
+            "type": "main",
+            "index": 5
+          }
+        ]
+      ]
+    },
+    "Fetch Manageengine Docs RSS": {
+      "main": [
+        [
+          {
+            "node": "Merge All Sources",
+            "type": "main",
+            "index": 6
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "94106ae3-a378-48dd-9d2a-080bfd152ed9",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "f1be174bef78294e2c77606dbf783d23750ab965d63a9a8bef19eb016f1d7db3"
+  },
+  "id": "uMiqIoULOPWexqF6",
+  "tags": []
+}
