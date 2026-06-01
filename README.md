@@ -1,3 +1,4 @@
+![Workflow](n8n CI Project SS.png)
 # BigFix Competitive Intelligence Agent
 ### AI-powered competitor monitoring for BigFix Compliance PM
 
