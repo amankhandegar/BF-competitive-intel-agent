@@ -23,11 +23,11 @@
     },
     {
       "parameters": {
-        "url": "https://news.google.com/rss/search?q=Tanium+endpoint+compliance&hl=en-US&gl=US&ceid=US:en",
+        "url": "https://news.google.com/rss/search?q=Competitor A+endpoint+compliance&hl=en-US&gl=US&ceid=US:en",
         "options": {}
       },
       "id": "aaf7aac9-1f7a-466a-a71d-1f110ed578c3",
-      "name": "Fetch Tanium Blog RSS",
+      "name": "Fetch Competitor A Blog RSS",
       "type": "n8n-nodes-base.rssFeedRead",
       "typeVersion": 1,
       "position": [
@@ -37,11 +37,11 @@
     },
     {
       "parameters": {
-        "url": "https://news.google.com/rss/search?q=Tanium+product+update+release&hl=en-US&gl=US&ceid=US:en",
+        "url": "https://news.google.com/rss/search?q=Competitor A+product+update+release&hl=en-US&gl=US&ceid=US:en",
         "options": {}
       },
       "id": "8e59ee3b-5aa6-46d5-9c47-92c3a14bad3e",
-      "name": "Fetch Tanium Docs RSS",
+      "name": "Fetch Competitor A Docs RSS",
       "type": "n8n-nodes-base.rssFeedRead",
       "typeVersion": 1,
       "position": [
@@ -57,7 +57,7 @@
           "parameters": [
             {
               "name": "q",
-              "value": "Tanium OR Ivanti OR ManageEngine endpoint compliance security"
+              "value": "Competitor A OR Competitor B OR Competitor C endpoint compliance security"
             },
             {
               "name": "sortBy",
@@ -103,7 +103,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Normalise all items into a unified shape\nconst items = $input.all();\nconst normalised = [];\n\nfor (const item of items) {\n  const d = item.json;\n\n  // RSS feed items (Tanium blog / docs)\n  if (d.title && d.link) {\n    const pubDate = d.pubDate || d.isoDate || d.date || '';\n    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);\n    const pub = new Date(pubDate);\n    if (pub > sevenDaysAgo || !pubDate) {\n      // Auto-detect competitor from title/summary content\nconst text = (d.title + ' ' + (d.contentSnippet || '')).toLowerCase();\nconst competitor = text.includes('ivanti') ? 'Ivanti' \n                 : text.includes('manageengine') ? 'ManageEngine' \n                 : 'Tanium';\n\nnormalised.push({\n  source: competitor + ' RSS',\n  title: d.title || '',\n  url: d.link || '',\n  summary: (d.contentSnippet || d.content || d.description || '').substring(0, 500),\n  published: pubDate,\n  competitor: competitor,\n  category: 'Blog / Docs'\n});\n    }\n    continue;\n  }\n\n  // NewsAPI response\n  if (d.articles) {\n    for (const art of d.articles) {\n      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);\n      const pub = new Date(art.publishedAt);\n      if (pub > sevenDaysAgo) {\n        const text = (art.title + ' ' + (art.description || '')).toLowerCase();\nconst competitor = text.includes('ivanti') ? 'Ivanti'\n                 : text.includes('manageengine') ? 'ManageEngine'\n                 : 'Tanium';\n\nnormalised.push({\n  source: art.source?.name || 'News',\n  title: art.title || '',\n  url: art.url || '',\n  summary: (art.description || art.content || '').substring(0, 500),\n  published: art.publishedAt,\n  competitor: competitor,\n  category: 'News'\n});\n      }\n    }\n  }\n}\n\nif (normalised.length === 0) {\n  return [{ json: { no_new_items: true, message: 'No new Tanium content this week.' } }];\n}\n\n// Deduplicate by URL\nconst seen = new Set();\nconst deduped = normalised.filter(n => {\n  if (seen.has(n.url)) return false;\n  seen.add(n.url);\n  return true;\n});\n\nreturn deduped.map(n => ({ json: n }));\n"
+        "jsCode": "// Normalise all items into a unified shape\nconst items = $input.all();\nconst normalised = [];\n\nfor (const item of items) {\n  const d = item.json;\n\n  // RSS feed items (Competitor A blog / docs)\n  if (d.title && d.link) {\n    const pubDate = d.pubDate || d.isoDate || d.date || '';\n    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);\n    const pub = new Date(pubDate);\n    if (pub > sevenDaysAgo || !pubDate) {\n      // Auto-detect competitor from title/summary content\nconst text = (d.title + ' ' + (d.contentSnippet || '')).toLowerCase();\nconst competitor = text.includes('Competitor B') ? 'Competitor B' \n                 : text.includes('Competitor C') ? 'Competitor C' \n                 : 'Competitor A';\n\nnormalised.push({\n  source: competitor + ' RSS',\n  title: d.title || '',\n  url: d.link || '',\n  summary: (d.contentSnippet || d.content || d.description || '').substring(0, 500),\n  published: pubDate,\n  competitor: competitor,\n  category: 'Blog / Docs'\n});\n    }\n    continue;\n  }\n\n  // NewsAPI response\n  if (d.articles) {\n    for (const art of d.articles) {\n      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);\n      const pub = new Date(art.publishedAt);\n      if (pub > sevenDaysAgo) {\n        const text = (art.title + ' ' + (art.description || '')).toLowerCase();\nconst competitor = text.includes('Competitor B') ? 'Competitor B'\n                 : text.includes('Competitor C') ? 'Competitor C'\n                 : 'Competitor A';\n\nnormalised.push({\n  source: art.source?.name || 'News',\n  title: art.title || '',\n  url: art.url || '',\n  summary: (art.description || art.content || '').substring(0, 500),\n  published: art.publishedAt,\n  competitor: competitor,\n  category: 'News'\n});\n      }\n    }\n  }\n}\n\nif (normalised.length === 0) {\n  return [{ json: { no_new_items: true, message: 'No new Competitor A content this week.' } }];\n}\n\n// Deduplicate by URL\nconst seen = new Set();\nconst deduped = normalised.filter(n => {\n  if (seen.has(n.url)) return false;\n  seen.add(n.url);\n  return true;\n});\n\nreturn deduped.map(n => ({ json: n }));\n"
       },
       "id": "5bb72605-77b3-4bfb-b138-996bb542246f",
       "name": "Normalise & Filter (Last 7 Days)",
@@ -149,7 +149,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Aggregate all items and build a prompt for Claude\nconst items = $input.all();\n\nconst itemList = items.map((item, i) => {\n  const d = item.json;\n  return '[' + (i+1) + '] COMPETITOR: ' + d.competitor + '\\nSOURCE: ' + d.source + '\\nTITLE: ' + d.title + '\\nURL: ' + d.url + '\\nPUBLISHED: ' + d.published + '\\nSUMMARY: ' + d.summary + '\\n';\n}).join('\\n---\\n');\n\nconst prompt = 'You are a Senior Product Intelligence Analyst for HCL BigFix Compliance.\\n\\n'\n  + 'Below are ' + items.length + ' recent items from Tanium, Ivanti, and ManageEngine (direct BigFix competitors) published in the last 7 days.\\n\\n'\n  + 'Analyse them and produce a structured competitive intelligence brief with EXACTLY this format:\\n\\n'\n  + '## EXECUTIVE SUMMARY\\n'\n  + 'One paragraph (3-5 sentences) covering the most strategically important signals this week across ALL three competitors.\\n\\n'\n  + '## KEY SIGNALS (top 5, ranked by importance to BigFix Compliance PM)\\n'\n  + 'For each signal:\\n'\n  + '- Red/Yellow/Green THREAT LEVEL (Red=high threat, Yellow=watch, Green=opportunity)\\n'\n  + '- COMPETITOR: Which competitor this is about\\n'\n  + '- SIGNAL: What they did / announced / changed\\n'\n  + '- BIGFIX IMPLICATION: What this means for BigFix Compliance strategy\\n'\n  + '- RECOMMENDED ACTION: Concrete PM action (PRD update / roadmap item / talking point)\\n\\n'\n  + '## COMPETITOR COMPARISON\\n'\n  + 'A brief side-by-side of what each competitor focused on this week:\\n'\n  + '- Tanium:\\n'\n  + '- Ivanti:\\n'\n  + '- ManageEngine:\\n\\n'\n  + '## FEATURE GAPS IDENTIFIED\\n'\n  + 'List any features Tanium/Ivanti/ManageEngine are emphasising that BigFix Compliance currently lacks.\\n\\n'\n  + '## BIGFIX DIFFERENTIATION OPPORTUNITIES\\n'\n  + 'Where can BigFix Compliance double down to stand out against all three?\\n\\n'\n  + '## ITEMS ANALYSED\\n'\n  + 'List all ' + items.length + ' items as: [N] Competitor - Title - URL\\n\\n'\n  + '---\\nRAW DATA:\\n'\n  + itemList\n  + '\\n\\nRespond only with the structured brief above. Be direct and specific - this is for a PM Monday morning review.';\n\nreturn [{ json: { prompt, item_count: items.length } }];"
+        "jsCode": "// Aggregate all items and build a prompt for Claude\nconst items = $input.all();\n\nconst itemList = items.map((item, i) => {\n  const d = item.json;\n  return '[' + (i+1) + '] COMPETITOR: ' + d.competitor + '\\nSOURCE: ' + d.source + '\\nTITLE: ' + d.title + '\\nURL: ' + d.url + '\\nPUBLISHED: ' + d.published + '\\nSUMMARY: ' + d.summary + '\\n';\n}).join('\\n---\\n');\n\nconst prompt = 'You are a Senior Product Intelligence Analyst for enterprise endpoint compliance product.\\n\\n'\n  + 'Below are ' + items.length + ' recent items from Competitor A, Competitor B, and Competitor C (direct the product competitors) published in the last 7 days.\\n\\n'\n  + 'Analyse them and produce a structured competitive intelligence brief with EXACTLY this format:\\n\\n'\n  + '## EXECUTIVE SUMMARY\\n'\n  + 'One paragraph (3-5 sentences) covering the most strategically important signals this week across ALL three competitors.\\n\\n'\n  + '## KEY SIGNALS (top 5, ranked by importance to the product Compliance PM)\\n'\n  + 'For each signal:\\n'\n  + '- Red/Yellow/Green THREAT LEVEL (Red=high threat, Yellow=watch, Green=opportunity)\\n'\n  + '- COMPETITOR: Which competitor this is about\\n'\n  + '- SIGNAL: What they did / announced / changed\\n'\n  + '- the product IMPLICATION: What this means for the product Compliance strategy\\n'\n  + '- RECOMMENDED ACTION: Concrete PM action (PRD update / roadmap item / talking point)\\n\\n'\n  + '## COMPETITOR COMPARISON\\n'\n  + 'A brief side-by-side of what each competitor focused on this week:\\n'\n  + '- Competitor A:\\n'\n  + '- Competitor B:\\n'\n  + '- Competitor C:\\n\\n'\n  + '## FEATURE GAPS IDENTIFIED\\n'\n  + 'List any features Competitor A/Competitor B/Competitor C are emphasising that the product Compliance currently lacks.\\n\\n'\n  + '## the product DIFFERENTIATION OPPORTUNITIES\\n'\n  + 'Where can the product Compliance double down to stand out against all three?\\n\\n'\n  + '## ITEMS ANALYSED\\n'\n  + 'List all ' + items.length + ' items as: [N] Competitor - Title - URL\\n\\n'\n  + '---\\nRAW DATA:\\n'\n  + itemList\n  + '\\n\\nRespond only with the structured brief above. Be direct and specific - this is for a PM Monday morning review.';\n\nreturn [{ json: { prompt, item_count: items.length } }];"
       },
       "id": "52110076-f71c-4dfc-954c-20f30245ea10",
       "name": "Build Claude Prompt",
@@ -162,7 +162,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Extract Gemini's text response and prepare for Google Sheets\nconst geminiResponse = $input.first().json;\nconst itemCountNode = $('Build Claude Prompt').first().json;\n\nlet analysisText = '';\ntry {\n  // Gemini response format is different from Claude\n  analysisText = geminiResponse.candidates[0].content.parts[0].text;\n} catch(e) {\n  analysisText = 'Error extracting Gemini response: ' + JSON.stringify(geminiResponse);\n}\n\n// Fix line breaks — convert \\n to actual newlines\nanalysisText = analysisText.replace(/\\\\n/g, '\\n');\n\n// Parse threat level counts from text\nconst redCount = (analysisText.match(/🔴/g) || []).length;\nconst yellowCount = (analysisText.match(/🟡/g) || []).length;\nconst greenCount = (analysisText.match(/🟢/g) || []).length;\n\n// Extract executive summary\nconst execMatch = analysisText.match(/## EXECUTIVE SUMMARY\\n([\\s\\S]*?)(?=\\n##)/);\nconst execSummary = execMatch ? execMatch[1].trim() : analysisText.substring(0, 500);\n\n// Week label\nconst weekStart = new Date();\nweekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1);\nconst weekLabel = weekStart.toISOString().split('T')[0];\n\nreturn [{\n  json: {\n    week: weekLabel,\n    competitor: 'Tanium',\n    items_analysed: itemCountNode.item_count || 0,\n    red_threats: redCount,\n    yellow_watch: yellowCount,\n    green_opps: greenCount,\n    exec_summary: execSummary,\n    full_analysis: analysisText,\n    generated_at: new Date().toISOString()\n  }\n}];"
+        "jsCode": "// Extract Gemini's text response and prepare for Google Sheets\nconst geminiResponse = $input.first().json;\nconst itemCountNode = $('Build Claude Prompt').first().json;\n\nlet analysisText = '';\ntry {\n  // Gemini response format is different from Claude\n  analysisText = geminiResponse.candidates[0].content.parts[0].text;\n} catch(e) {\n  analysisText = 'Error extracting Gemini response: ' + JSON.stringify(geminiResponse);\n}\n\n// Fix line breaks — convert \\n to actual newlines\nanalysisText = analysisText.replace(/\\\\n/g, '\\n');\n\n// Parse threat level counts from text\nconst redCount = (analysisText.match(/🔴/g) || []).length;\nconst yellowCount = (analysisText.match(/🟡/g) || []).length;\nconst greenCount = (analysisText.match(/🟢/g) || []).length;\n\n// Extract executive summary\nconst execMatch = analysisText.match(/## EXECUTIVE SUMMARY\\n([\\s\\S]*?)(?=\\n##)/);\nconst execSummary = execMatch ? execMatch[1].trim() : analysisText.substring(0, 500);\n\n// Week label\nconst weekStart = new Date();\nweekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1);\nconst weekLabel = weekStart.toISOString().split('T')[0];\n\nreturn [{\n  json: {\n    week: weekLabel,\n    competitor: 'Competitor A',\n    items_analysed: itemCountNode.item_count || 0,\n    red_threats: redCount,\n    yellow_watch: yellowCount,\n    green_opps: greenCount,\n    exec_summary: execSummary,\n    full_analysis: analysisText,\n    generated_at: new Date().toISOString()\n  }\n}];"
       },
       "id": "37363c4d-12be-4111-972a-8c120b5c09a9",
       "name": "Extract & Structure Response",
@@ -319,9 +319,9 @@
           "value": {
             "Last_Updated": "={{ $json.generated_at }}",
             "Week": "={{ $json.week }}",
-            "Tanium_Red": "={{ $json.red_threats }}",
-            "Tanium_Yellow": "={{ $json.yellow_watch }}",
-            "Tanium_Green": "={{ $json.green_opps }}",
+            "Competitor A_Red": "={{ $json.red_threats }}",
+            "Competitor A_Yellow": "={{ $json.yellow_watch }}",
+            "Competitor A_Green": "={{ $json.green_opps }}",
             "Latest_Summary": "={{ $json.exec_summary }}"
           },
           "matchingColumns": [],
@@ -345,8 +345,8 @@
               "canBeUsedToMatch": true
             },
             {
-              "id": "Tanium_Red",
-              "displayName": "Tanium_Red",
+              "id": "Competitor A_Red",
+              "displayName": "Competitor A_Red",
               "required": false,
               "defaultMatch": false,
               "display": true,
@@ -354,8 +354,8 @@
               "canBeUsedToMatch": true
             },
             {
-              "id": "Tanium_Yellow",
-              "displayName": "Tanium_Yellow",
+              "id": "Competitor A_Yellow",
+              "displayName": "Competitor A_Yellow",
               "required": false,
               "defaultMatch": false,
               "display": true,
@@ -363,8 +363,8 @@
               "canBeUsedToMatch": true
             },
             {
-              "id": "Tanium_Green",
-              "displayName": "Tanium_Green",
+              "id": "Competitor A_Green",
+              "displayName": "Competitor A_Green",
               "required": false,
               "defaultMatch": false,
               "display": true,
@@ -452,7 +452,7 @@
     },
     {
       "parameters": {
-        "url": "https://www.ivanti.com/blog/rss",
+        "url": "https://www.Competitor B.com/blog/rss",
         "options": {
           "customFields": ""
         }
@@ -464,11 +464,11 @@
         304
       ],
       "id": "309ab859-7d29-4703-bf6f-0ca4a0a91f4f",
-      "name": "Fetch Ivanti Blog RSS"
+      "name": "Fetch Competitor B Blog RSS"
     },
     {
       "parameters": {
-        "url": "https://www.ivanti.com/blog/topics/security-advisory/rss",
+        "url": "https://www.Competitor B.com/blog/topics/security-advisory/rss",
         "options": {}
       },
       "type": "n8n-nodes-base.rssFeedRead",
@@ -478,11 +478,11 @@
         368
       ],
       "id": "3f9e96a4-012f-4f7e-9b14-30f2aad54588",
-      "name": "Fetch Ivanti Docs RSS"
+      "name": "Fetch Competitor B Docs RSS"
     },
     {
       "parameters": {
-        "url": "https://news.google.com/rss/search?q=ManageEngine+endpoint+compliance&hl=en-US&gl=US&ceid=US:en",
+        "url": "https://news.google.com/rss/search?q=Competitor C+endpoint+compliance&hl=en-US&gl=US&ceid=US:en",
         "options": {}
       },
       "type": "n8n-nodes-base.rssFeedRead",
@@ -492,11 +492,11 @@
         416
       ],
       "id": "200b49de-ef6d-41c5-b3c1-42c9e7e4b7fb",
-      "name": "Fetch Manageengine Blog RSS"
+      "name": "Fetch Competitor C Blog RSS"
     },
     {
       "parameters": {
-        "url": "https://news.google.com/rss/search?q=ManageEngine+Endpoint+Central+compliance+update&hl=en-US&gl=US&ceid=US:en",
+        "url": "https://news.google.com/rss/search?q=Competitor C+Endpoint+Central+compliance+update&hl=en-US&gl=US&ceid=US:en",
         "options": {}
       },
       "type": "n8n-nodes-base.rssFeedRead",
@@ -506,7 +506,7 @@
         464
       ],
       "id": "d57c2add-732d-44d1-a229-3c720e32625f",
-      "name": "Fetch Manageengine Docs RSS"
+      "name": "Fetch Competitor C Docs RSS"
     }
   ],
   "pinData": {},
@@ -515,12 +515,12 @@
       "main": [
         [
           {
-            "node": "Fetch Tanium Blog RSS",
+            "node": "Fetch Competitor A Blog RSS",
             "type": "main",
             "index": 0
           },
           {
-            "node": "Fetch Tanium Docs RSS",
+            "node": "Fetch Competitor A Docs RSS",
             "type": "main",
             "index": 0
           },
@@ -530,29 +530,29 @@
             "index": 0
           },
           {
-            "node": "Fetch Ivanti Blog RSS",
+            "node": "Fetch Competitor B Blog RSS",
             "type": "main",
             "index": 0
           },
           {
-            "node": "Fetch Ivanti Docs RSS",
+            "node": "Fetch Competitor B Docs RSS",
             "type": "main",
             "index": 0
           },
           {
-            "node": "Fetch Manageengine Blog RSS",
+            "node": "Fetch Competitor C Blog RSS",
             "type": "main",
             "index": 0
           },
           {
-            "node": "Fetch Manageengine Docs RSS",
+            "node": "Fetch Competitor C Docs RSS",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Fetch Tanium Blog RSS": {
+    "Fetch Competitor A Blog RSS": {
       "main": [
         [
           {
@@ -563,7 +563,7 @@
         ]
       ]
     },
-    "Fetch Tanium Docs RSS": {
+    "Fetch Competitor A Docs RSS": {
       "main": [
         [
           {
@@ -678,7 +678,7 @@
         ]
       ]
     },
-    "Fetch Ivanti Blog RSS": {
+    "Fetch Competitor B Blog RSS": {
       "main": [
         [
           {
@@ -689,7 +689,7 @@
         ]
       ]
     },
-    "Fetch Ivanti Docs RSS": {
+    "Fetch Competitor B Docs RSS": {
       "main": [
         [
           {
@@ -700,7 +700,7 @@
         ]
       ]
     },
-    "Fetch Manageengine Blog RSS": {
+    "Fetch Competitor C Blog RSS": {
       "main": [
         [
           {
@@ -711,7 +711,7 @@
         ]
       ]
     },
-    "Fetch Manageengine Docs RSS": {
+    "Fetch Competitor C Docs RSS": {
       "main": [
         [
           {
