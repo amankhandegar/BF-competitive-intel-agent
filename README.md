@@ -34,6 +34,10 @@ zero manual effort.
 ## Files
 - `bigfix_competitive_intel.json` — import this into n8n to run the workflow
 
+Note: This is a personal learning project built to demonstrate 
+AI agent development skills. All company names and competitor 
+references are for illustrative purposes only and do not 
+represent any official employer activity or strategy.
+
 ## Built by
 Aman Khandegar — Product Manager, BigFix Compliance  
-Built as a practical AI demonstration of competitive intelligence automation
