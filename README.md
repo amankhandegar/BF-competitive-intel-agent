@@ -1,4 +1,4 @@
-<img width="1392" height="431" alt="CI_n8n_Project.png" src="https://github.com/user-attachments/assets/b8dcb6b8-232b-479c-b833-7fa3d77845f4" />
+![BF-competitive-intel-agent](CI_n8n_Project.png)
 
 # AI Competitive Intelligence Agent
 ### Automated competitor monitoring using n8n + Google Gemini
